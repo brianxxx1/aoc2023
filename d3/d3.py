@@ -1,146 +1,86 @@
-## Advent of Code 2023, Day 3
+from itertools import groupby
+from operator import itemgetter
 
 
-# Part 1 ======================================================================================================================
-import re
-
-
-def find_sum_of_parts(input:str) -> int:
+def find_sum_of_parts(input:str):
     data_line = input.split("\n")
-    parts_list = []
+    sum = 0
     for line_index, data in enumerate(data_line):
-        previous_line_index = line_index - 1
-        next_line_index = line_index + 1
-        nums = re.findall(r'\d+', data)
-        for num in nums:
-            print(num)
-            if previous_line_index < 0:
-                pass
-            else:
-                indexes = find_index_of_num(num,data)
-                # print(indexes)
+        indexes_of_nums = get_indexes_of_digits(data)
+        for indexes in indexes_of_nums:
+            sum += check_neighbour(indexes=indexes, row=line_index, data_line=data_line)
+    print(sum)
 
-                for index in indexes:
-                    if not data_line[previous_line_index][index].isdigit() and data_line[previous_line_index][index] != ".":
-                        parts_list.append(num)
-                        break
 
-                if indexes[0] - 1 > 0:
-                    if not data_line[previous_line_index][indexes[0] - 1].isdigit() and data_line[previous_line_index][
-                        indexes[0] - 1] != ".":
-                        parts_list.append(num)
-                        continue
-                if indexes[-1] + 1 < len(data_line):
-                    if not data_line[previous_line_index][indexes[-1] + 1].isdigit() and data_line[previous_line_index][
-                        indexes[-1] + 1] != ".":
-                        parts_list.append(num)
-                        continue
-
-            if next_line_index >= len(data_line):
-                pass
-            else:
-                indexes = find_index_of_num(num, data)
-                for index in indexes:
-                    if not data_line[next_line_index][index].isdigit() and data_line[next_line_index][index] != ".":
-                        parts_list.append(num)
-                        break
-                if indexes[0] - 1 > 0:
-                    if not data_line[next_line_index][indexes[0] - 1].isdigit() and data_line[next_line_index][
-                        indexes[0] - 1] != ".":
-                        parts_list.append(num)
-                        continue
-                if indexes[-1] + 1 < len(data_line):
-                    if not data_line[next_line_index][indexes[-1] + 1].isdigit() and data_line[next_line_index][
-                        indexes[-1] + 1] != ".":
-                        parts_list.append(num)
-                        continue
-            indexes = find_index_of_num(num, data)
-            if indexes[0] - 1 > 0:
-                if not data_line[line_index][indexes[0]-1].isdigit() and data_line[line_index][indexes[0]-1] != ".":
-                    parts_list.append(num)
+def check_neighbour(indexes: list, row: int, data_line: list):
+    # Directions: up, left, right, down
+    directions = [(-1, 0),(-1 ,-1), (-1, 1), (0, -1), (0, 1), (1, 0), (1, -1), (1, 1)]
+    flag = False
+    for index in indexes:
+        for dr, dc in directions:
+            new_row, column = row + dr, index + dc
+            try:
+                if not data_line[new_row][column].isdigit() and data_line[new_row][column] != ".":
+                    flag = True
+                    break
+                else:
                     continue
-            if indexes[-1]+1 < len(data_line):
-                if not data_line[line_index][indexes[-1]+1].isdigit() and data_line[line_index][indexes[-1]+1] != ".":
-                    parts_list.append(num)
-                    continue
+            except IndexError:
+                pass
+    if flag:
+        string = ""
+        for index in indexes:
+            string += data_line[row][index]
+        return int(string)
+    else:
+        return 0
+
+
+def get_indexes_of_digits(data:str) -> list:
+    lst = []
+    for index, value in enumerate(data):
+        if value.isdigit():
+            lst.append(index)
+    # First, sort the list to ensure numbers are in order
+    lst.sort()
+
+    # Group continuous numbers together
+    grouped = []
+    for k, g in groupby(enumerate(lst), lambda x: x[0] - x[1]):
+        grouped.append(list(map(itemgetter(1), g)))
+
+    return grouped
+
+def part_2(data):
+    data_lines = data.split("\n")
+    indexes_of_nums = []
+    for data_line in data_lines:
+        indexes_of_nums.append(get_indexes_of_digits(data_line))
 
     sum = 0
-    for index, value in enumerate(parts_list):
-        parts_list[index] = int(value)
-        sum += parts_list[index]
-    print(parts_list)
-    return sum
+    for line_index, data_line in enumerate(data_lines):
+        for index, element in enumerate(data_line):
+            if element == "*":
+                directions = [(-1, 0), (-1, -1), (-1, 1), (0, -1), (0, 1), (1, 0), (1, -1), (1, 1)]
+                indexes_set = set()
+                for dr, dc in directions:
+                    new_row, column = line_index + dr, index + dc
+                    for item in indexes_of_nums[new_row]:
+                        if column in item:
+                            indexes_set.add((new_row,tuple(item)))
+                if len(indexes_set) == 2:
+                    lst = get_num(indexes_set, data_lines)
+                    sum += lst[0] * lst[1]
+    print(sum)
+def get_num(indexes_set, data_lines):
+    num_list = []
+    for set in indexes_set:
+        str = ""
+        for index in set[1]:
+            str += data_lines[set[0]][index]
+        num_list.append(int(str))
+    return num_list
 
-def find_index_of_num(num:str, data:str):
-    return_list = []
-    index = data.find(num)
-    while not (index == 0 or not data[index - 1].isalnum()) and \
-            (index + len(num) == len(data) or not data[index + len(num)].isalnum()):
-        index = data.find(num,index+1)
-    for i in range(len(num)):
-        return_list.append(index+i)
-
-    return return_list
-
-
-
-# def check_num_adjacent_to_symbal()
-
-    # return
 with open("input.txt") as f:
     data = f.read()
-    print(find_sum_of_parts(data))
-
-
-
-def get_neighbours(tuple, ncols, nrows):
-    cols = sorted([tuple[i][1] for i in range(1, len(tuple))])
-    neighbours = []
-    for i in range(tuple[0]-1 , tuple[0]+2):
-        for j in range(cols[0]-1, cols[-1] + 2):
-            if 0 <= i < nrows and 0 <= j < ncols and (i,j) not in tuple:
-                neighbours.append((i,j))
-    return neighbours
-
-with open('input.txt') as file:
-    input_arr = [list(line) for line in file.read().strip().split('\n')]
-
-nrows = len(input_arr)
-ncols = len(input_arr[0])
-
-symbols = []
-numbers = {}
-for i in range(nrows):
-    number = ''
-    indices = [i]
-    for j in range(ncols):
-        if not input_arr[i][j].isdigit() and input_arr[i][j] != '.':
-            symbols.append((i,j))
-            if number != '':
-                numbers[tuple(indices)] = number
-                number = ''
-                indices = [i]
-        elif input_arr[i][j].isdigit():
-            number += input_arr[i][j]
-            indices.append((i,j))
-        elif input_arr[i][j] == '.':
-            if number != '':
-                numbers[tuple(indices)] = number
-                number = ''
-                indices = [i]
-    if number != '':
-        numbers[tuple(indices)] = number
-
-
-part_sum = 0
-part_numbers = []
-for key, value in numbers.items():
-    neighbours = get_neighbours(key, ncols, nrows)
-    if len([indice for indice in neighbours if indice in symbols]) > 0:
-        part_sum += int(value)
-        part_numbers.append(int(value))
-
-print("Part 1: ", part_sum)
-print(part_numbers)
-d = "291..217..1..................321......-...................17.....*.......810............411......573.688...273.....*....$.............../..."
-print(find_index_of_num("17",d))
+    part_2(data)
